@@ -10,9 +10,72 @@ class Program
     }
 }
 
+public class Employee : IEmployee
+{
+    public int Id { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string JobTitle { get; set; }
+}
+
+public interface IEmployee
+{
+    int Id { get; set; }
+    string FirstName { get; set; }
+    string LastName { get; set; }
+    string JobTitle { get; set; }
+}
+
 public class EmployeeNotify : IObserver<ExternalVisitor>
 {
+    IEmployee _employee = null;
+    List<ExternalVisitor> _externalVisitors = null;
 
+    public EmployeeNotify(IEmployee employee)
+    {
+        _employee = employee;
+    }
+
+    public void OnCompleted()
+    {
+        
+    }
+
+    public void OnError(Exception error)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void OnNext(ExternalVisitor value)
+    {
+        ExternalVisitor externalVisitor = value;
+
+        if (externalVisitor.EmployeeContactId == _employee.Id)
+        {
+            ExternalVisitor externalVisistorListItem = _externalVisitors.FirstOrDefault(e => e.Id == externalVisitor.Id);
+
+            if (externalVisistorListItem == null)
+            {
+                _externalVisitors.Add(externalVisitor);
+
+                Console.WriteLine($"{_employee.FirstName}" +
+                    $" {_employee.LastName}," +
+                    $" your visitor has arrived. Visitor Id({externalVisitor.Id})," +
+                    $" FirstName({externalVisitor.FirstName}), " +
+                    $"LastName({externalVisitor.LastName})," +
+                    $" entered the builing, DateTime({externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss")})");
+                Console.WriteLine();
+            }
+            else
+            {
+                if (externalVisitor.InBuilding == false)
+                {
+                    externalVisistorListItem.InBuilding = false;
+                    externalVisistorListItem.ExitDateTime = externalVisitor.ExitDateTime;
+                }
+            }
+        }
+    }
 }
 
 public class UnSubscriber<ExternalVisitor> : IDisposable
