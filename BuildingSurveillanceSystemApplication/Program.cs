@@ -26,18 +26,40 @@ public interface IEmployee
     string JobTitle { get; set; }
 }
 
-public class EmployeeNotify : IObserver<ExternalVisitor>
+public abstract class Observer : IObserver<ExternalVisitor>
+{
+    IDisposable _cancellation;
+    protected List<ExternalVisitor> _externalVisitors = new List<ExternalVisitor>();
+
+    public abstract void OnCompleted();
+
+    public abstract void OnError(Exception error);
+
+    public abstract void OnNext(ExternalVisitor value);
+
+    public void Subscribe(IObservable<ExternalVisitor> provider)
+    {
+        _cancellation = provider.Subscribe(this);
+    }
+
+    public void UnSubscribe()
+    {
+        _cancellation.Dispose();
+        _externalVisitors.Clear();
+    }
+}
+
+public class EmployeeNotify : Observer
 {
     IEmployee _employee = null;
-    List<ExternalVisitor> _externalVisitors = null;
-    IDisposable _cancellation;
+    
 
     public EmployeeNotify(IEmployee employee)
     {
         _employee = employee;
     }
 
-    public void OnCompleted()
+    public override void OnCompleted()
     {
         string heading = $"{_employee.FirstName + " " + _employee.LastName} Daily Visitors's Report";
         Console.WriteLine();
@@ -57,12 +79,12 @@ public class EmployeeNotify : IObserver<ExternalVisitor>
         Console.WriteLine();
     }
 
-    public void OnError(Exception error)
+    public override void OnError(Exception error)
     {
         throw new NotImplementedException();
     }
 
-    public void OnNext(ExternalVisitor value)
+    public override void OnNext(ExternalVisitor value)
     {
         ExternalVisitor externalVisitor = value;
 
@@ -91,24 +113,69 @@ public class EmployeeNotify : IObserver<ExternalVisitor>
                 }
             }
         }
-    }
-
-    public void Subscribe(IObservable<ExternalVisitor> provider)
-    {
-        _cancellation = provider.Subscribe(this);
-    }
-
-    public void UnSubscribe()
-    {
-        _cancellation.Dispose();
-        _externalVisitors.Clear();
-    }
+    }   
 }
 
-public class SecurityNotify
+public class SecurityNotify : Observer
 {
+    public override void OnCompleted()
+    {
+        string heading = "Security Daily Visitor's Report";
+        Console.WriteLine();
 
+        Console.WriteLine(heading);
+        Console.WriteLine(new string('-', heading.Length));
+        Console.WriteLine();
+
+        foreach (ExternalVisitor externalVisitor in _externalVisitors)
+        {
+            externalVisitor.InBuilding = false;
+
+            Console.WriteLine($"{externalVisitor.Id,-6}{externalVisitor.FirstName,-15}{externalVisitor.LastName,-15}{externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss"),-25}{externalVisitor.ExitDateTime.ToString("dd MMM yyyy hh:mm:ss tt"),-25}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine();
+    }
+
+    public override void OnError(Exception error)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void OnNext(ExternalVisitor value)
+    {
+        ExternalVisitor externalVisitor = value;
+
+        ExternalVisitor externalVisitorListItem = _externalVisitors.FirstOrDefault(e => e.Id == externalVisitor.Id);
+
+        if (externalVisitorListItem == null)
+        {
+            _externalVisitors.Add(externalVisitor);
+
+            //OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Security);
+
+            Console.WriteLine($"Security notification: Visitor Id({externalVisitor.Id}), FirstName({externalVisitor.FirstName}), LastName({externalVisitor.LastName}), entered the building, DateTime({externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss tt")})");
+
+            //OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Normal);
+
+            Console.WriteLine();
+        }
+        else
+        {
+            if (externalVisitor.InBuilding == false)
+            {
+                //update local external visitor list item with data from the external visitor object passed in from the observable object
+                externalVisitorListItem.InBuilding = false;
+                externalVisitorListItem.ExitDateTime = externalVisitor.ExitDateTime;
+
+                Console.WriteLine($"Security notification: Visitor Id({externalVisitor.Id}), FirstName({externalVisitor.FirstName}), LastName({externalVisitor.LastName}), exited the building, DateTime({externalVisitor.ExitDateTime.ToString("dd MMM yyyy hh:mm:ss tt")})");
+                Console.WriteLine();
+            }
+        }
+    }
 }
+
 
 public class UnSubscriber<ExternalVisitor> : IDisposable
 {
