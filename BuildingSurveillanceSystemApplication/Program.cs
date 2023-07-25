@@ -1,12 +1,46 @@
-﻿using System.Linq;
-
-namespace BuildingSurveillanceSystemApplication;
+﻿namespace BuildingSurveillanceSystemApplication;
 
 class Program
 {
     static void Main(string[] args)
     {
+        Console.Clear();
 
+        SecuritySurveillanceHub securitySurveillanceHub = new SecuritySurveillanceHub();
+
+        EmployeeNotify employeeNotify = new EmployeeNotify(new Employee
+        {
+            Id = 1,
+            FirstName = "Bob",
+            LastName = "Jones",
+            JobTitle = "Development Manager"
+        });
+
+        EmployeeNotify employeeNotify2 = new EmployeeNotify(new Employee
+        {
+            Id = 2,
+            FirstName = "Dave",
+            LastName = "Kendal",
+            JobTitle = "Chief Information Officer"
+        });
+
+        SecurityNotify securityNotify = new SecurityNotify();
+
+        employeeNotify.Subscribe(securitySurveillanceHub);
+        employeeNotify2.Subscribe(securitySurveillanceHub);
+        securityNotify.Subscribe(securitySurveillanceHub);
+
+        securitySurveillanceHub.ConfirmExternalVisitorEntersBuilding(1, "Andrew", "Jackson", "The Company", "Contractor", DateTime.Parse("12 May 2020 11:00"), 1);
+        securitySurveillanceHub.ConfirmExternalVisitorEntersBuilding(2, "Jane", "Davidson", "Another Company", "Lawyer", DateTime.Parse("12 May 2020 12:00"), 2);
+
+        //employeeNotify.UnSubscribe();
+
+        securitySurveillanceHub.ConfirmExternalVisitorExitsBuilding(1, DateTime.Parse("July 27 2013 13:00"));
+        securitySurveillanceHub.ConfirmExternalVisitorExitsBuilding(2, DateTime.Parse("July 27 2013 15:00"));
+
+        securitySurveillanceHub.BuildingEntryCutOffTimeReached();
+
+        Console.ReadKey();
     }
 }
 
@@ -72,7 +106,7 @@ public class EmployeeNotify : Observer
         {
             externalVisitor.InBuilding = false;
 
-            Console.WriteLine($"{externalVisitor.Id, -6} {externalVisitor.FirstName, -15}{externalVisitor.LastName, -15}{externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss"), -25}{externalVisitor.ExitDateTime.ToString("dd MMM yyyy hh:mm:ss"), -25}");
+            Console.WriteLine($"{externalVisitor.Id, -6} {externalVisitor.FirstName, -15}{externalVisitor.LastName, -15}{externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss"), -25}{externalVisitor.ExitDateTime.ToString("dd MMM yyyy hh:mm:ss tt"), -25}");
         }
 
         Console.WriteLine();
@@ -96,12 +130,18 @@ public class EmployeeNotify : Observer
             {
                 _externalVisitors.Add(externalVisitor);
 
+                OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Employee);
+
                 Console.WriteLine($"{_employee.FirstName}" +
                     $" {_employee.LastName}," +
                     $" your visitor has arrived. Visitor Id({externalVisitor.Id})," +
                     $" FirstName({externalVisitor.FirstName}), " +
                     $"LastName({externalVisitor.LastName})," +
                     $" entered the builing, DateTime({externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss")})");
+
+                OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Normal);
+
+
                 Console.WriteLine();
             }
             else
@@ -153,11 +193,11 @@ public class SecurityNotify : Observer
         {
             _externalVisitors.Add(externalVisitor);
 
-            //OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Security);
+            OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Security);
 
             Console.WriteLine($"Security notification: Visitor Id({externalVisitor.Id}), FirstName({externalVisitor.FirstName}), LastName({externalVisitor.LastName}), entered the building, DateTime({externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss tt")})");
 
-            //OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Normal);
+            OutputFormatter.ChangeOutputTheme(OutputFormatter.TextOutputTheme.Normal);
 
             Console.WriteLine();
         }
@@ -201,6 +241,12 @@ public class SecuritySurveillanceHub : IObservable<ExternalVisitor>
 {
     private List<ExternalVisitor> _externalVisitors;
     private List<IObserver<ExternalVisitor>> _observers;
+
+    public SecuritySurveillanceHub()
+    {
+        _externalVisitors = new List<ExternalVisitor>();
+        _observers = new List<IObserver<ExternalVisitor>>();
+    }
 
     public IDisposable Subscribe(IObserver<ExternalVisitor> observer)
     {
@@ -270,6 +316,34 @@ public class SecuritySurveillanceHub : IObservable<ExternalVisitor>
             {
                 observer.OnCompleted();
             }
+        }
+    }
+}
+
+public static class OutputFormatter
+{
+    public enum TextOutputTheme
+    {
+        Security,
+        Employee,
+        Normal
+    }
+
+    public static void ChangeOutputTheme(TextOutputTheme textOutputTheme)
+    {
+        if (textOutputTheme == TextOutputTheme.Employee)
+        {
+            Console.BackgroundColor = ConsoleColor.DarkMagenta;
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+        else if (textOutputTheme == TextOutputTheme.Security)
+        {
+            Console.BackgroundColor = ConsoleColor.DarkBlue;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+        }
+        else
+        {
+            Console.ResetColor();
         }
     }
 }
