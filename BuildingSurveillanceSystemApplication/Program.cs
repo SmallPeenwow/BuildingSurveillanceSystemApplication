@@ -10,6 +10,31 @@ class Program
     }
 }
 
+public class EmployeeNotify : IObserver<ExternalVisitor>
+{
+
+}
+
+public class UnSubscriber<ExternalVisitor> : IDisposable
+{
+    private List<IObserver<ExternalVisitor>> _observers;
+    private IObserver<ExternalVisitor> _observer;
+
+    public UnSubscriber(List<IObserver<ExternalVisitor>> observers, IObserver<ExternalVisitor> observer)
+    {
+        _observers = observers;
+        _observer = observer;
+    }
+
+    public void Dispose()
+    {
+        if (_observers.Contains(_observer))
+        {
+            _observers.Remove(_observer);
+        }
+    }
+}
+
 public class SecuritySurveillanceHub : IObservable<ExternalVisitor>
 {
     private List<ExternalVisitor> _externalVisitors;
@@ -17,7 +42,17 @@ public class SecuritySurveillanceHub : IObservable<ExternalVisitor>
 
     public IDisposable Subscribe(IObserver<ExternalVisitor> observer)
     {
-        throw new NotImplementedException();
+        if (!_observers.Contains(observer))
+        {
+            _observers.Add(observer);
+        }
+
+        foreach (ExternalVisitor externalVisitor in _externalVisitors)
+        {
+            observer.OnNext(externalVisitor);
+        }
+
+        return new UnSubscriber<ExternalVisitor>(_observers, observer);
     }
 
     public void ConfirmExternalVisitorEntersBuilding(
@@ -43,8 +78,7 @@ public class SecuritySurveillanceHub : IObservable<ExternalVisitor>
 
         _externalVisitors.Add(externalVisitor);
 
-        // TODO: IObserver<ExternalVisitor> test with that
-        foreach (var observer in _observers)
+        foreach (IObserver<ExternalVisitor> observer in _observers)
         {
             observer.OnNext(externalVisitor);
         }
