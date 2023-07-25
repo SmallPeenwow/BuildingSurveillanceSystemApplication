@@ -30,6 +30,7 @@ public class EmployeeNotify : IObserver<ExternalVisitor>
 {
     IEmployee _employee = null;
     List<ExternalVisitor> _externalVisitors = null;
+    IDisposable _cancellation;
 
     public EmployeeNotify(IEmployee employee)
     {
@@ -38,7 +39,22 @@ public class EmployeeNotify : IObserver<ExternalVisitor>
 
     public void OnCompleted()
     {
-        
+        string heading = $"{_employee.FirstName + " " + _employee.LastName} Daily Visitors's Report";
+        Console.WriteLine();
+
+        Console.WriteLine(heading);
+        Console.WriteLine(new string('-', heading.Length));
+        Console.WriteLine();
+
+        foreach (ExternalVisitor externalVisitor in _externalVisitors)
+        {
+            externalVisitor.InBuilding = false;
+
+            Console.WriteLine($"{externalVisitor.Id, -6} {externalVisitor.FirstName, -15}{externalVisitor.LastName, -15}{externalVisitor.EntryDateTime.ToString("dd MMM yyyy hh:mm:ss"), -25}{externalVisitor.ExitDateTime.ToString("dd MMM yyyy hh:mm:ss"), -25}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine();
     }
 
     public void OnError(Exception error)
@@ -76,6 +92,22 @@ public class EmployeeNotify : IObserver<ExternalVisitor>
             }
         }
     }
+
+    public void Subscribe(IObservable<ExternalVisitor> provider)
+    {
+        _cancellation = provider.Subscribe(this);
+    }
+
+    public void UnSubscribe()
+    {
+        _cancellation.Dispose();
+        _externalVisitors.Clear();
+    }
+}
+
+public class SecurityNotify
+{
+
 }
 
 public class UnSubscriber<ExternalVisitor> : IDisposable
